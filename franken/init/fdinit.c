@@ -28,6 +28,56 @@ int lkl_netdev_add(union lkl_netdev nd, void *mac);
 int lkl_if_up(int ifindex);
 int lkl_netdev_get_ifindex(int id);
 
+typedef unsigned short      umode_t;
+
+long lkl_syscall(long no, long *params);
+#define __LKL__MAP0(m,...)
+#define __LKL__MAP1(m,t,a) m(t,a)
+#define __LKL__MAP2(m,t,a,...) m(t,a), __LKL__MAP1(m,__VA_ARGS__)
+#define __LKL__MAP3(m,t,a,...) m(t,a), __LKL__MAP2(m,__VA_ARGS__)
+#define __LKL__MAP4(m,t,a,...) m(t,a), __LKL__MAP3(m,__VA_ARGS__)
+#define __LKL__MAP5(m,t,a,...) m(t,a), __LKL__MAP4(m,__VA_ARGS__)
+#define __LKL__MAP6(m,t,a,...) m(t,a), __LKL__MAP5(m,__VA_ARGS__)
+#define __LKL__MAP(n,...) __LKL__MAP##n(__VA_ARGS__)
+
+#define __LKL__SC_LONG(t, a) (long)a
+#define __LKL__SC_DECL(t, a) t a
+
+#define LKL_SYSCALL0(name)                         \
+    static __inline__ long lkl_sys##name(void)                 \
+    {                                  \
+        long params[6];                        \
+        return lkl_syscall(__lkl__NR##name, params);           \
+    }
+
+#define LKL_SYSCALLx(x, name, ...)                     \
+        static __inline__                              \
+    long lkl_sys##name(__LKL__MAP(x, __LKL__SC_DECL, __VA_ARGS__))         \
+    {                                  \
+        long params[6] = { __LKL__MAP(x, __LKL__SC_LONG, __VA_ARGS__) }; \
+        return lkl_syscall(__lkl__NR##name, params);           \
+    }
+
+#define LKL_SYSCALL_DEFINE0(name, ...) LKL_SYSCALL0(name)
+#define LKL_SYSCALL_DEFINE1(name, ...) LKL_SYSCALLx(1, name, __VA_ARGS__)
+#define LKL_SYSCALL_DEFINE2(name, ...) LKL_SYSCALLx(2, name, __VA_ARGS__)
+#define LKL_SYSCALL_DEFINE3(name, ...) LKL_SYSCALLx(3, name, __VA_ARGS__)
+#define LKL_SYSCALL_DEFINE4(name, ...) LKL_SYSCALLx(4, name, __VA_ARGS__)
+#define LKL_SYSCALL_DEFINE5(name, ...) LKL_SYSCALLx(5, name, __VA_ARGS__)
+#define LKL_SYSCALL_DEFINE6(name, ...) LKL_SYSCALLx(6, name, __VA_ARGS__)
+
+#define __lkl__NR_chroot 51
+LKL_SYSCALL_DEFINE1(_chroot,const char *,filename)
+
+#define __lkl__NR_mknod 1027
+typedef unsigned short           lkl_umode_t;
+LKL_SYSCALL_DEFINE3(_mknod,const char *,filename,lkl_umode_t,mode,unsigned,dev)
+
+#define __lkl__NR_mkdir 1030
+LKL_SYSCALL_DEFINE2(_mkdir,const char *,pathname,umode_t,mode)
+
+#define LKL_MKDEV(ma,mi)    ((ma)<<8 | (mi))
+
 enum rump_etfs_type {
 	RUMP_ETFS_REG,
 	RUMP_ETFS_BLK,
@@ -315,6 +365,10 @@ register_block(int dev, int fd, int flags, off_t size, int root)
 	if (ret < 0)
 		printf("can't mount disk (%d) at %s. err=%d\n",
 			disk_id, mnt_point, ret);
+
+    lkl_sys_chroot("/etc");
+    lkl_sys_mkdir("/dev", 0700);
+    lkl_sys_mknod("/dev/null", 0666, LKL_MKDEV(1, 3));
 
 	atexit(unmount_atexit);
 	return ret;
