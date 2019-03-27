@@ -15,6 +15,7 @@ PHONY:		clean distclean qemu-arm spike seccomp
 clean:		
 		rm -rf rumpobj
 		$(MAKE) clean -C musl
+		$(MAKE) clean -C platform/qemu-arm
 
 distclean:	clean
 		rm -rf rump

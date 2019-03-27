@@ -107,6 +107,23 @@ franken_lkl_load_json_config(int fd)
 
 }
 
+static void
+franken_lkl_load_env_config(void)
+{
+	int ret;
+
+	json_cfg = (struct lkl_config *)malloc(sizeof(struct lkl_config));
+	if (!json_cfg) {
+	        printf("malloc error\n");
+	        return;
+	}
+	memset(json_cfg, 0, sizeof(struct lkl_config));
+
+	ret = lkl_load_config_env(json_cfg);
+	if (ret < 0)
+		printf("load_config_env error \n\n%s\n");
+}
+
 struct lkl_config *
 franken_lkl_get_json_config(void)
 {
@@ -165,6 +182,12 @@ __franken_fdinit()
 			break;
 		}
 	}
+
+#ifdef MUSL_LIBC
+	/* No valid file descriptors exist */
+	if (fd == 0)
+		franken_lkl_load_env_config();
+#endif
 }
 
 /* XXX would be much nicer to build these functions against NetBSD libc headers, but at present

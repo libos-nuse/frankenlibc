@@ -10,7 +10,10 @@ CFLAGS+=-g
 
 DEPS=$(LIBDIR)/libc.a
 
-OBJ=$(OBJDIR)/hello $(OBJDIR)/ctor $(OBJDIR)/cat #$(OBJDIR)/hello-pthread
+OBJ=$(OBJDIR)/hello $(OBJDIR)/ctor #$(OBJDIR)/hello-pthread
+ifneq ($(OS),qemu-arm)
+	OBJ+=$(OBJDIR)/cat
+endif
 
 default:		$(OBJ)
 
@@ -23,7 +26,9 @@ run:			$(OBJ)
 			mkfs.ext4 -F disk.img
 			RUMP_VERBOSE=1 ${REXEC} $(OBJDIR)/hello disk.img
 			${REXEC} $(OBJDIR)/ctor disk.img
+ifneq ($(wildcard $(OBJDIR)/cat),)
 			echo frankenlibc | ${REXEC} $(OBJDIR)/cat disk.img
+endif
 ifneq ($(wildcard $(OBJDIR)/ping),)
 			${REXEC} ${OBJDIR}/ping disk.img -- -c 3 127.0.0.1
 			${REXEC} ${OBJDIR}/ping6 disk.img -- -c 3 ::1

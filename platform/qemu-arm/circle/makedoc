@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ $1 != clean ]]
+then
+	cd include
+	doxygen ../Doxyfile
+	cd ..
+else
+	rm -rf doc/html/
+fi

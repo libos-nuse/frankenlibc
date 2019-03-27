@@ -1,5 +1,6 @@
 COMPILE.c?=$(CC) -c $(CPPFLAGS) $(CFLAGS)
 COMPILE.S?=$(CC) -c $(CPPFLAGS) $(ASFLAGS)
+INSTALL?=install
 RUMPOBJ?=../../rumpobj
 OBJDIR=$(RUMPOBJ)/platform
 RUMP?=$(RUMPOBJ)/rump
@@ -8,6 +9,7 @@ CRTFILES=$(CRTDIR)/startup.o $(CRTDIR)/crt0.o
 CRTFILES+=$(CRTDIR)/crti.o $(CRTDIR)/crtn.o
 CRTFILES+=$(CRTDIR)/crtbegin.o $(CRTDIR)/crtbeginT.o
 CRTFILES+=$(CRTDIR)/crtend.o
+CRTFILES+=$(CRTDIR)/link.ld
 OBJ=$(CRTFILES)
 LIBG=$(CRTDIR)/libg.a
 OBJ+=$(LIBG)
@@ -24,7 +26,6 @@ OBJ+=$(OBJDIR)/kill.o
 OBJ+=$(OBJDIR)/lseek.o
 OBJ+=$(OBJDIR)/mmap.o
 OBJ+=$(OBJDIR)/mprotect.o
-OBJ+=$(OBJDIR)/__libc_start_main.o
 OBJ+=$(OBJDIR)/poll.o
 OBJ+=$(OBJDIR)/pread.o
 OBJ+=$(OBJDIR)/pwrite.o
@@ -34,7 +35,11 @@ OBJ+=$(OBJDIR)/read.o
 OBJ+=$(OBJDIR)/readv.o
 OBJ+=$(OBJDIR)/write.o
 OBJ+=$(OBJDIR)/writev.o
-HEADERS=$(CRTDIR) $(OBJDIR)
+OBJ+=$(OBJDIR)/libcircle.o
+OBJ+=$(OBJDIR)/libcircleusb.o
+OBJ+=$(OBJDIR)/libcircleinput.o
+OBJ+=$(OBJDIR)/libcirclefs.o
+HEADERS=$(CRTDIR) $(OBJDIR) circle
 INCLUDES=-I../include -I../../franken/include -I.
 CPPFLAGS+=-nostdinc $(INCLUDES)
 CFLAGS+=-fno-stack-protector
@@ -48,8 +53,8 @@ $(OBJDIR):
 $(CRTDIR):			
 				mkdir -p $(CRTDIR)
 
-$(CRTDIR)/startup.o:		startup.s $(HEADERS)
-				$(COMPILE.S) -o $@ startup.s
+$(CRTDIR)/startup.o:		circle/lib/startup.o $(HEADERS)
+				$(INSTALL) $< $@
 
 $(CRTDIR)/crt0.o:		$(CRTDIR)
 				printf "\n" | $(COMPILE.c) -o $@ -x c -
@@ -68,6 +73,9 @@ $(CRTDIR)/crtbeginT.o:		$(CRTDIR)
 
 $(CRTDIR)/crtend.o:		$(CRTDIR)
 				printf "\n" | $(COMPILE.c) -o $@ -x c -
+
+$(CRTDIR)/link.ld:		link.ld $(CRTDIR)
+				$(INSTALL) -m644 $< $@
 
 $(LIBG):			$(CRTDIR)
 				printf "\n" | $(COMPILE.c) -o $(OBJDIR)/g.o -x c -
@@ -105,9 +113,6 @@ $(OBJDIR)/getrandom.o:		getrandom.c $(HEADERS)
 $(OBJDIR)/kill.o:		kill.c $(HEADERS)
 				$(COMPILE.c) -o $@ kill.c
 
-$(OBJDIR)/__libc_start_main.o:	__libc_start_main.c $(HEADERS)
-				$(COMPILE.c) -o $@ __libc_start_main.c
-
 $(OBJDIR)/lseek.o:		lseek.c $(HEADERS)
 				$(COMPILE.c) -o $@ lseek.c
 
@@ -144,6 +149,41 @@ $(OBJDIR)/write.o:		write.c $(HEADERS)
 $(OBJDIR)/writev.o:		writev.c $(HEADERS)
 				$(COMPILE.c) -o $@ writev.c
 
-.PHONY:				clean
+$(OBJDIR)/libcircle.o:		circle/lib/libcircle.o $(HEADERS)
+				$(INSTALL) $< $@
+
+$(OBJDIR)/libcircleusb.o:	circle/lib/usb/libcircleusb.o $(HEADERS)
+				$(INSTALL) $< $@
+
+$(OBJDIR)/libcircleinput.o:	circle/lib/input/libcircleinput.o $(HEADERS)
+				$(INSTALL) $< $@
+
+$(OBJDIR)/libcirclefs.o:	circle/lib/fs/libcirclefs.o $(HEADERS)
+				$(INSTALL) $< $@
+
+circle: circle/lib/startup.o circle/lib/libcircle.o
+circle: circle/lib/usb/libcircleusb.o circle/lib/input/libcircleinput.o
+circle: circle/lib/fs/libcirclefs.o
+
+circle/lib/startup.o:
+	$(MAKE) -C circle/lib $(notdir $@) $(CIRCLE_FLAGS)
+
+circle/lib/libcircle.o:
+	$(MAKE) -C circle/lib $(notdir $@) $(CIRCLE_FLAGS)
+
+circle/lib/usb/libcircleusb.o:
+	$(MAKE) -C circle/lib/usb $(notdir $@) $(CIRCLE_FLAGS)
+
+circle/lib/input/libcircleinput.o:
+	$(MAKE) -C circle/lib/input $(notdir $@) $(CIRCLE_FLAGS)
+
+circle/lib/fs/libcirclefs.o:
+	$(MAKE) -C circle/lib/fs $(notdir $@) $(CIRCLE_FLAGS)
+
+.PHONY:				clean circle
 clean:		
 				rm -f $(OBJ)
+				$(MAKE) -C circle/lib clean
+				$(MAKE) -C circle/lib/usb clean
+				$(MAKE) -C circle/lib/input clean
+				$(MAKE) -C circle/lib/fs clean

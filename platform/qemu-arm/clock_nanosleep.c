@@ -23,5 +23,9 @@ int clock_nanosleep(clockid_t clk_id, int flags, const struct timespec *request,
 		remain->tv_nsec = 0;
 	}
 
+	/* XXX: maybe need lkl_ops->thread_yield() ? */
+        void __sched_schedule(void);
+        __sched_schedule();
+
 	return 0;
 }

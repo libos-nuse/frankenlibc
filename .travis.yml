@@ -1,8 +1,59 @@
-language: c
+language: nix
 
-compiler:
-  - gcc
-  - clang
+env:
+  global:
+    # XXX: Nix on Travis uses the master branch of the nixpkgs repo, meaning we
+    # need to pin nixpkgs to a specific version if we want to avoid frequent
+    # rebuilds of dependant packages.
+    #
+    # TODO: <nixpkgs> should ideally point to the latest stable release.
+    # However, we currently use the unstable release (@ 2019-03-03) since we
+    # depend on NixOS/nixpkgs#52146, which hasn't been merged into stable yet.
+    # It should be possible to use stable once 19.03 is out.
+    - NIX_PATH=nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/34aa254f9ebf5899636a9927ceefbc9df80230f4.tar.gz
+
+matrix:
+  include:
+    - name: "gcc-netbsd"
+      env: BUILD_TARGET=frankenlibc-gcc
+    - name: "clang-netbsd"
+      env: BUILD_TARGET=frankenlibc-clang
+    - name: "lkl-musl"
+      env: BUILD_TARGET=frankenlibc-lkl
+    - name: "raspi2-linux"
+      env: BUILD_TARGET=frankenlibc-arm
+
+git:
+  # XXX: Submodules have to be fetched manually since it frequently times out.
+  submodules: false
+
+cache:
+  timeout: 1000
+  directories:
+    - $HOME/nix.store
+    # XXX: Beware. Desperate attempt to cache the lkl repository.
+    - $TRAVIS_BUILD_DIR/.git/modules
+
+before_cache:
+  - mkdir -p $HOME/nix.store
+  - |
+    nix copy --to file://$HOME/nix.store -f default.nix \
+      "$BUILD_TARGET".buildInputs \
+      "$BUILD_TARGET".nativeBuildInputs \
+      "$BUILD_TARGET".depsBuildBuild
+
+before_install:
+  # XXX: Shallow clone of submodules is possible with newer version of git, but
+  # is tricky (https://stackoverflow.com/questions/2144406/how-to-make-shallow-git-submodules)
+  - travis_wait 30 git submodule update --init --recursive
+  - mkdir -p $HOME/.config/nix
+  - |
+    # XXX: We write the configuration line-by-line, since Travis doesn't seem
+    # to recognize heredoc delimiters for some reason.
+    echo "substituters = file://$HOME/nix.store https://cache.nixos.org/" \
+      >> ~/.config/nix/nix.conf
+    echo "require-sigs = false" \
+      >> ~/.config/nix/nix.conf
 
 script:
-  - ./build.sh
+  - nix-build -A "$BUILD_TARGET"

@@ -147,7 +147,9 @@ workflows:
     jobs:
      - linux-linux
      - linux-netbsd
-     - qemu-arm-linux
-     - qemu-arm-netbsd
+     # FIXME: Forked version of QEMU is needed
+     # - qemu-arm-linux
+     # TODO: Investigate netbsd support for qemu-arm
+     # - qemu-arm-netbsd
      - freebsd-linux
      - freebsd-netbsd

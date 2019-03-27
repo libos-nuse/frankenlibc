@@ -535,6 +535,7 @@ ${INSTALL-install} ${RUMP}/bin/rexec ${BINDIR}
 rumpkernel_install_extra_libs
 
 ${INSTALL-install} ${RUMP}/lib/*.o ${OUTDIR}/lib
+[ -f ${RUMP}/lib/link.ld ] && ${INSTALL-install} ${RUMP}/lib/link.ld ${OUTDIR}/lib
 [ -f ${RUMP}/lib/libg.a ] && ${INSTALL-install} ${RUMP}/lib/libg.a ${OUTDIR}/lib
 ${INSTALL-install} ${RUMPOBJ}/explode/libc.a ${OUTDIR}/lib
 
@@ -634,6 +635,7 @@ CC="${BINDIR}/${COMPILER}" \
 	RUMPDIR="${OUTDIR}" \
 	RUMPOBJ="${RUMPOBJ}" \
 	BINDIR="${BINDIR}" \
+	OS="${OS}" \
 	${MAKE} ${STDJ} -C tests
 
 # test for executable stack

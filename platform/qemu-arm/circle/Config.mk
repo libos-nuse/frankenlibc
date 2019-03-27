@@ -1,0 +1,4 @@
+RASPPI = 2
+STDLIB_SUPPORT = 2
+FLOAT_ABI = softfp
+ARCH=
